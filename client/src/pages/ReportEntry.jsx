@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Save } from 'lucide-react';
-import { API_URL } from '../config';
+import { db } from '../utils/storage';
 
 export default function ReportEntry() {
   const navigate = useNavigate();
@@ -17,65 +17,113 @@ export default function ReportEntry() {
       address: '',
       contact_number: '',
       referred_by: '',
-      test_id: '',
-      result: '',
-      amount: '',
+      tests_performed: [{ test_id: '', result: '' }],
+      amount: '0',
       date: new Date().toISOString().split('T')[0],
       remarks: ''
     };
   });
 
-  // Fetch Tests for dropdown
+  const { state } = useLocation();
+
+  // Fetch Tests from local storage
   useEffect(() => {
-    fetch(`${API_URL}/tests`)
-      .then(res => res.json())
+    db.getTests()
       .then(data => {
-        if (!data.error) setTests(data);
+        if (data) setTests(data);
       })
       .catch(err => console.error(err));
   }, []);
 
-  const handleTestChange = (e) => {
-    const testId = e.target.value;
-    const selectedTest = tests.find(t => t.id.toString() === testId);
-    
+  // Handle Edit/Duplicate state
+  useEffect(() => {
+    if (state?.editReport) {
+      const r = state.editReport;
+      const nextId = parseInt(localStorage.getItem('last_report_id') || '0', 10) + 1;
+      
+      setFormData({
+        serial_number: nextId.toString(),
+        patient_name: r.patient_name || '',
+        age: r.age || '',
+        gender: r.gender || 'Male',
+        address: r.address || '',
+        contact_number: r.contact_number || '',
+        referred_by: r.referred_by || '',
+        tests_performed: r.tests_performed ? r.tests_performed.map(tp => ({ test_id: tp.test_id, result: tp.result })) : [{ test_id: '', result: '' }],
+        amount: r.amount?.toString() || '0',
+        date: new Date().toISOString().split('T')[0],
+        remarks: r.remarks || ''
+      });
+    }
+  }, [state, tests]); // Run when state or tests change to ensure lookup works
+
+  const addTestRow = () => {
     setFormData(prev => ({
       ...prev,
-      test_id: testId,
-      amount: selectedTest ? selectedTest.amount : ''
+      tests_performed: [...prev.tests_performed, { test_id: '', result: '' }]
     }));
+  };
+
+  const removeTestRow = (index) => {
+    setFormData(prev => {
+      const newTests = prev.tests_performed.filter((_, i) => i !== index);
+      // Re-calculate amount
+      const newAmount = newTests.reduce((sum, tp) => {
+        const test = tests.find(t => t.id.toString() === tp.test_id.toString());
+        return sum + (test ? parseFloat(test.amount || 0) : 0);
+      }, 0);
+
+      return {
+        ...prev,
+        tests_performed: newTests.length > 0 ? newTests : [{ test_id: '', result: '' }],
+        amount: newAmount.toString()
+      };
+    });
+  };
+
+  const handleTestRowChange = (index, field, value) => {
+    setFormData(prev => {
+      const newTests = [...prev.tests_performed];
+      newTests[index] = { ...newTests[index], [field]: value };
+      
+      // If test_id changed, update amount
+      let newAmount = prev.amount;
+      if (field === 'test_id') {
+        newAmount = newTests.reduce((sum, tp) => {
+          const test = tests.find(t => t.id.toString() === tp.test_id.toString());
+          return sum + (test ? parseFloat(test.amount || 0) : 0);
+        }, 0).toString();
+      }
+
+      return {
+        ...prev,
+        tests_performed: newTests,
+        amount: newAmount
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation
+    if (formData.tests_performed.some(t => !t.test_id || !t.result)) {
+      alert('Please select a test and enter result for all rows.');
+      return;
+    }
+
     localStorage.setItem('last_report_id', formData.serial_number);
     
     try {
-      const selectedTest = tests.find(t => t.id.toString() === formData.test_id.toString());
       const payload = {
         ...formData,
         amount: parseFloat(formData.amount || 0)
       };
 
-      const res = await fetch(`${API_URL}/reports`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
+      const data = await db.saveReport(payload);
       const createdReport = data[0];
       
-      // Fuse local form data to pass to preview exactly as expected
-      const previewState = {
-        ...formData,
-        id: createdReport.id,
-        test_name: selectedTest ? selectedTest.name : 'Unknown Test'
-      };
-
-      navigate(`/preview/${createdReport.id}`, { state: previewState });
+      navigate(`/preview/${createdReport.id}`, { state: { ...payload, id: createdReport.id } });
     } catch (err) {
       alert('Error saving report: ' + err.message);
     }
@@ -126,38 +174,63 @@ export default function ReportEntry() {
           </div>
         </div>
 
-        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>Test Details</h3>
+        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+          Test Details
+        </h3>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div className="form-group">
-            <label className="form-label">Referred By (Doctor)</label>
-            <input type="text" className="form-control" name="referred_by" value={formData.referred_by} onChange={e => setFormData({...formData, referred_by: e.target.value})} />
-          </div>
+        {formData.tests_performed.map((testRow, index) => {
+          const selectedTestDetails = tests.find(t => t.id.toString() === testRow.test_id.toString());
           
-          <div className="form-group">
-            <label className="form-label">Select Test</label>
-            <select className="form-control" name="test_id" required value={formData.test_id} onChange={handleTestChange}>
-              <option value="" disabled>-- Choose Test --</option>
-              {tests.map(test => (
-                <option key={test.id} value={test.id}>{test.name}</option>
-              ))}
-            </select>
-          </div>
+          return (
+            <div key={index} style={{ position: 'relative', marginBottom: '1.5rem', padding: '1rem', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.02)' }}>
+              {formData.tests_performed.length > 1 && (
+                <button type="button" onClick={() => removeTestRow(index)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  Remove
+                </button>
+              )}
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Select Test</label>
+                  <select className="form-control" required value={testRow.test_id} onChange={e => handleTestRowChange(index, 'test_id', e.target.value)}>
+                    <option value="" disabled>-- Choose Test --</option>
+                    {tests.map(test => (
+                      <option key={test.id} value={test.id}>{test.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-          <div className="form-group">
-            <label className="form-label">Result Value</label>
-            <input type="text" className="form-control" name="result" required value={formData.result} onChange={e => setFormData({...formData, result: e.target.value})} />
-          </div>
+                <div className="form-group">
+                  <label className="form-label">Result Value</label>
+                  <input type="text" className="form-control" required value={testRow.result} onChange={e => handleTestRowChange(index, 'result', e.target.value)} />
+                </div>
 
-          <div className="form-group">
-            <label className="form-label">Amount ($)</label>
-            <input type="number" step="0.01" className="form-control" name="amount" required value={formData.amount} readOnly style={{ backgroundColor: 'var(--bg-color)' }} />
-          </div>
+                <div className="form-group">
+                  <label className="form-label">Unit & Reference</label>
+                  <div style={{ padding: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)', backgroundColor: 'var(--bg-color)', borderRadius: '4px', minHeight: '38px', display: 'flex', alignItems: 'center' }}>
+                    {selectedTestDetails ? (
+                      <span>{selectedTestDetails.uom} | Ref: {selectedTestDetails.normal_range}</span>
+                    ) : (
+                      <i style={{ opacity: 0.5 }}>Select a test...</i>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        <div className="form-group" style={{ maxWidth: '200px' }}>
+          <label className="form-label">Total Amount ($)</label>
+          <input type="number" step="0.01" className="form-control" value={formData.amount} readOnly style={{ backgroundColor: 'var(--bg-color)', fontWeight: 'bold' }} />
         </div>
 
         <div className="form-group" style={{ marginBottom: '2rem' }}>
           <label className="form-label">Remarks / Additional Info</label>
           <textarea className="form-control" name="remarks" rows="3" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})}></textarea>
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={addTestRow}>+ Add Another Test</button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

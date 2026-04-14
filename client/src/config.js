@@ -1,1 +1,2 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Removed API_URL as we are now using localStorage only.
+export const API_URL = '';
