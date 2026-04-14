@@ -174,9 +174,8 @@ export default function ReportEntry() {
           </div>
         </div>
 
-        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
           Test Details
-          <button type="button" className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={addTestRow}>+ Add Another Test</button>
         </h3>
         
         {formData.tests_performed.map((testRow, index) => {
@@ -229,6 +228,9 @@ export default function ReportEntry() {
         <div className="form-group" style={{ marginBottom: '2rem' }}>
           <label className="form-label">Remarks / Additional Info</label>
           <textarea className="form-control" name="remarks" rows="3" value={formData.remarks} onChange={e => setFormData({...formData, remarks: e.target.value})}></textarea>
+          <div style={{ marginTop: '0.5rem' }}>
+            <button type="button" className="btn btn-outline" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={addTestRow}>+ Add Another Test</button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

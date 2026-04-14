@@ -57,8 +57,8 @@ export default function ReportPreview() {
         </button>
       </div>
 
-      <div style={{ overflowX: 'auto', paddingBottom: '1rem', width: '100%' }}>
-        <div className="card preview-card" style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', width: '210mm', minWidth: '794px', minHeight: 'auto', margin: '0 auto', backgroundColor: 'white' }}>
+      <div style={{ overflowX: 'auto', paddingBottom: '1rem', width: '100%', marginTop: '11rem', }}>
+        <div className="card preview-card" style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', width: '210mm', minWidth: '794px', minHeight: '270mm', margin: '0 auto', backgroundColor: 'white', boxSizing: 'border-box' }}>
 
           {/* Header */}
           {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -89,7 +89,7 @@ export default function ReportPreview() {
           {/* </div> */}
 
           {/* Separator */}
-          <div style={{ borderTop: '2px solid #ffffffff', borderBottom: '4px solid #ffffffff', height: '2px', display: 'flex', marginBottom: '0.5rem', marginTop: '7rem' }}></div>
+          {/* <div style={{ borderTop: '2px solid #ffffffff', borderBottom: '4px solid #ffffffff', height: '2px', display: 'flex', marginBottom: '0.5rem', marginTop: '8rem' }}></div> */}
 
           {/* Info Grid (All fields in one box) */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '1rem', padding: '0.5rem', border: 'none', backgroundColor: '#fff' }}>
@@ -168,17 +168,15 @@ export default function ReportPreview() {
 
           {/* Remarks */}
           {report.remarks && (
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div>
               <strong>Remarks:</strong>
               <p style={{ marginTop: '0.25rem', color: 'var(--text-muted)' }}>{report.remarks}</p>
             </div>
           )}
 
-          {/* Footer/Signatures */}
-          <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', paddingTop: '0.5rem' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ width: '200px', borderBottom: '1px solid var(--text-main)', marginBottom: '0.5rem' }}></div>
-              <p style={{ fontSize: '1rem', fontWeight: 'bold', margin: '0' }}>Analyst</p>
+          <div style={{ marginTop: '19.5rem', paddingTop: '2rem', display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+            <div style={{ textAlign: 'center', minWidth: '200px' }}>
+              <p style={{ fontSize: '1.1rem', fontWeight: 'bold', color: '#000', paddingTop: '0.5rem' }}>Analyst</p>
             </div>
           </div>
 

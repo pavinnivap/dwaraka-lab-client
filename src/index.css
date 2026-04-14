@@ -352,6 +352,21 @@ a:hover {
   /* Force A4 Size formatting if needed */
   @page {
     size: A4;
-    margin: 20mm;
+    margin: 10mm;
+  }
+
+  .preview-card {
+    min-height: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .main-content {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 }
